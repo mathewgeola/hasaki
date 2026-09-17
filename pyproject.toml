@@ -1,0 +1,19 @@
+[project]
+name = "hasaki"
+version = "0.0.3"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "mathewgeola", email = "mathewgeola@gmail.com" }
+]
+requires-python = ">=3.12.10"
+dependencies = [
+    "httpx>=0.28.1",
+    "pandas>=3.0.5",
+    "parsel>=1.11.0",
+    "requests>=2.34.2",
+]
+
+[build-system]
+requires = ["uv_build>=0.11.14,<0.12.0"]
+build-backend = "uv_build"
