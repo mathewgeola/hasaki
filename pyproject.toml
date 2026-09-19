@@ -1,6 +1,6 @@
 [project]
 name = "hasaki"
-version = "0.0.5"
+version = "0.0.6"
 description = "Add your description here"
 readme = "README.md"
 authors = [
@@ -8,10 +8,12 @@ authors = [
 ]
 requires-python = ">=3.12.10"
 dependencies = [
+    "anyio>=4.15.1",
     "httpx>=0.28.1",
     "pandas>=3.0.5",
     "parsel>=1.11.0",
     "requests>=2.34.2",
+    "tenacity>=9.1.4",
 ]
 
 [build-system]
@@ -20,5 +22,15 @@ build-backend = "uv_build"
 
 [dependency-groups]
 dev = [
-    "black>=26.5.1",
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
+    "ruff>=0.16.8",
 ]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+
+[tool.ruff.lint]
+ignore = ["BLE001"]
