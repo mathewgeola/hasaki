@@ -26,15 +26,20 @@ class DownloadResult(NamedTuple):
 
 
 class FileDownloader:
+    _RETRYABLE_STATUS = frozenset({429, 500, 502, 503, 504})
+
     def __init__(
         self,
         *,
         concurrency: int = 10,
         timeout: float = 60.0,
+        retries: int = 3,
         transport: httpx.AsyncBaseTransport | None = None,
     ):
         if concurrency <= 0:
             raise ValueError("concurrency 必须大于 0")
+        if retries <= 0:
+            raise ValueError("retries 必须大于 0")
 
         self._client = httpx.AsyncClient(
             timeout=timeout,
@@ -42,6 +47,7 @@ class FileDownloader:
             transport=transport,
         )
         self._limiter = anyio.CapacityLimiter(concurrency)
+        self._retries = retries
 
     async def __aenter__(self) -> Self:
         return self
@@ -56,6 +62,23 @@ class FileDownloader:
         return list(await anyio.gather(*(self._download(job) for job in jobs)))
 
     async def _download(self, job: DownloadJob) -> DownloadResult:
+        attempt = 0
+        while True:
+            try:
+                return await self._fetch(job)
+            except Exception as exc:
+                if attempt == self._retries - 1 or not self._is_retryable(exc):
+                    return DownloadResult(job.path, exc)
+                await anyio.sleep(0.2 * 2**attempt)
+                attempt += 1
+
+    @staticmethod
+    def _is_retryable(exc: Exception) -> bool:
+        if isinstance(exc, httpx.HTTPStatusError):
+            return exc.response.status_code in FileDownloader._RETRYABLE_STATUS
+        return isinstance(exc, httpx.TransportError)
+
+    async def _fetch(self, job: DownloadJob) -> DownloadResult:
         path = job.path
         part = Path(f"{path}.part")
 
@@ -76,6 +99,6 @@ class FileDownloader:
                 part.replace(path)
 
                 return DownloadResult(path)
-        except Exception as exc:
+        except Exception:
             part.unlink(missing_ok=True)
-            return DownloadResult(path, exc)
+            raise
